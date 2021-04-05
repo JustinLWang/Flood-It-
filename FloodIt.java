@@ -1,14 +1,10 @@
 import java.util.ArrayList;
 import java.util.Arrays;
-
+import java.util.Random;
 import tester.*;
 import javalib.impworld.*;
-import javalib.worldcanvas.WorldCanvas;
-
 import java.awt.Color;
 import javalib.worldimages.*;
-import java.util.Random;
-
 
 //Represents a single square of the game area
 class Cell {
@@ -33,6 +29,28 @@ class Cell {
     this.bottom = null;
   }
 
+  public void floodAdjacentsHelper(Color c) {
+
+    if(!(this.top == null) && (this.top.color.equals(this.color))) {
+      this.top.color = c;
+      this.top.flooded = true;
+    }
+    if(!(this.left == null) && (this.left.color.equals(this.color))) {
+      this.left.color = c;
+      this.left.flooded = true;
+
+    }
+    if(!(this.right == null) && (this.right.color.equals(this.color))) {
+      this.right.color = color;
+      this.right.flooded = true;
+
+    }
+    if(!(this.bottom == null) && (this.bottom.color.equals(this.color))) {
+      this.bottom.color = c;
+      this.bottom.flooded = true;
+
+    }
+  }
 }  
 
 // represents a FloodIt World
@@ -41,39 +59,83 @@ class FloodItWorld extends World {
   ArrayList<Cell> board;
   int size;
   Random rand;
+  Color floodColor;
+  Integer chancesTotal;
+  Integer chancesUsed;
 
   FloodItWorld(int size) {
     this.size = size;
     this.rand = new Random();
     this.constructBoard();
+    this.floodColor = this.board.get(0).color;
+    chancesTotal = this.size * 2;
+    chancesUsed = 0;
   }
   
   FloodItWorld(int size, Random rand) {
     this.size = size;
     this.rand = rand;
     this.constructBoard();
+    this.floodColor = this.board.get(0).color;
+    chancesTotal = this.size * 2;
+    chancesUsed = 0;
   }
 
 
-  // method that makes the WorlScene
-  public WorldScene makeScene() {
-    int width = this.size * 30;
-    int height = this.size * 30;
-    WorldScene game = new WorldScene(width, height);
-
-    WorldImage gamePic = new EmptyImage();
-    for (int i = 0; i < this.size; i++) {
-      gamePic = new AboveImage(makeRow(i), gamePic);
+//method that makes the WorlScene
+ public WorldScene makeScene() {
+   int width = this.size * 30;
+   int height = this.size * 30;
+   WorldScene game = new WorldScene(width, height);
+   WorldImage gamePic = new EmptyImage();
+   for (int i = this.size - 1; i >= 0; i--) {
+     gamePic = new AboveImage(makeRow(i), gamePic);
+   }
+   game.placeImageXY(gamePic, width / 2, height / 2);
+   game.placeImageXY(new TextImage(chancesUsed.toString() + "/" + this.chancesTotal.toString(), 30, Color.BLACK), width + 30, height + 30);
+   return game;
+ }
+  
+  public void onKeyEvent(String key) {
+    if(key.equals("r")) {
+      this.constructBoard();
+      this.chancesTotal = this.size * 2;
+      this.chancesUsed = 0;
     }
-
-    game.placeImageXY(gamePic, width / 2, height / 2);
-    return game;
   }
+  
+  public void onMouseClicked(Posn pos) {
+    int xValue = pos.x / 30;
+    int yValue = pos.y / 30;
+    
+    if (pos.x < this.size * 30 && pos.y < this.size * 30) {
+      int index = xValue + yValue * this.size;
+      this.floodColor = this.board.get(index).color;
+      for(int i = 0; i < this.board.size(); i++) {
+        if(this.board.get(i).flooded) {
+          this.board.get(i).color = this.floodColor;
+        }
+      }
+      floodAdjacents();
+      this.chancesUsed ++;
+    }
+  }
+  
+  
+  
+  void floodAdjacents() {
+    for(int i = 0; i < this.board.size(); i++) {
+      if (this.board.get(i).flooded) {
+        this.board.get(i).floodAdjacentsHelper(this.floodColor);
+      }
+    }
+  }
+  
 
   // method that makes the rows for the world
   WorldImage makeRow(int row) {
     WorldImage img = new EmptyImage();
-    for (int i = 0; i < this.size; i++) {
+    for (int i = this.size - 1; i >= 0; i--) {
       img = new BesideImage(new RectangleImage(30, 30, "solid", 
           this.board.get(i + (this.size * row)).color), img);
     }
@@ -119,12 +181,18 @@ class FloodItWorld extends World {
         result.get(i - j).top = result.get(i - j - this.size);
       }
     }
-
-
-    // sets bottom for all Cells
-
+    
     this.board = result;
     this.board.get(0).flooded = true;
+  }
+  
+  boolean allColorsSame() {
+    for(int i = 0; i < this.board.size(); i++) {
+      if (!(this.board.get(i).color.equals(this.floodColor))) {
+        return false;
+      }
+    }
+    return true;
   }
 
 
@@ -140,6 +208,7 @@ class FloodExamples {
   FloodItWorld testGame3 = new FloodItWorld(3);
   FloodItWorld testGame0 = new FloodItWorld(1);
   FloodItWorld testGame4 = new FloodItWorld(2);
+  FloodItWorld testGame10 = new FloodItWorld(10);
  
   FloodItWorld testGame5 = new FloodItWorld(1, seeded);
   FloodItWorld testGame5Copy = new FloodItWorld(1, seeded);
@@ -310,13 +379,32 @@ class FloodExamples {
     t.checkExpect(this.testGame6, this.testGame6Copy);
     
   }
+  
+  boolean testFloodAdjacentHelper(Tester t) {
+    return true;
+  }
+  
+  boolean testFloodAdjacent(Tester t) {
+    return true;
+  }
+  
+  boolean testOnMouseClick(Tester t) {
+    return true;
+  }
 
 
+  /*
   // test for drawScene()
   boolean testDrawGame(Tester t) {
     WorldCanvas c = new WorldCanvas(600, 600);
     return c.drawScene(this.testGame2.makeScene()) && c.show();
   }
+  */
+  
+  void testGame(Tester t) {
+    testGame10.bigBang(1000,1000, 1.0 / 10.0);
+  }
+ 
 
 
 
