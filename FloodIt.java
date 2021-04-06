@@ -62,14 +62,18 @@ class FloodItWorld extends World {
   Color floodColor;
   Integer chancesTotal;
   Integer chancesUsed;
+  Integer secondsLeft;
+  ArrayList<Cell> recentlyFlooded;
 
   FloodItWorld(int size) {
     this.size = size;
     this.rand = new Random();
     this.constructBoard();
     this.floodColor = this.board.get(0).color;
-    chancesTotal = this.size * 2;
+    chancesTotal = this.size * 2 + this.size / 2;
     chancesUsed = 0;
+    this.secondsLeft = 10;
+    recentlyFlooded = new ArrayList<Cell>();
   }
   
   FloodItWorld(int size, Random rand) {
@@ -77,8 +81,10 @@ class FloodItWorld extends World {
     this.rand = rand;
     this.constructBoard();
     this.floodColor = this.board.get(0).color;
-    chancesTotal = this.size * 2;
+    chancesTotal = this.size * 2 + this.size / 2;
     chancesUsed = 0;
+    this.secondsLeft = 10;
+    recentlyFlooded = new ArrayList<Cell>();
   }
 
 
@@ -93,6 +99,14 @@ class FloodItWorld extends World {
    }
    game.placeImageXY(gamePic, width / 2, height / 2);
    game.placeImageXY(new TextImage(chancesUsed.toString() + "/" + this.chancesTotal.toString(), 30, Color.BLACK), width + 30, height + 30);
+   game.placeImageXY(new TextImage(this.secondsLeft.toString(), 30, Color.black), width + 30, 30);
+   
+   if(this.chancesUsed > this.chancesTotal) {
+     game.placeImageXY(new TextImage("You Lose!", 30, Color.black), width + 70, 70);
+   } else if (this.allColorsSame()) {
+     game.placeImageXY(new TextImage("You Win!", 30, Color.black), width + 70, 70);
+   }
+   
    return game;
  }
   
@@ -101,6 +115,7 @@ class FloodItWorld extends World {
       this.constructBoard();
       this.chancesTotal = this.size * 2;
       this.chancesUsed = 0;
+      this.secondsLeft = 10;
     }
   }
   
@@ -118,7 +133,19 @@ class FloodItWorld extends World {
       }
       floodAdjacents();
       this.chancesUsed ++;
+      this.secondsLeft = 10;
     }
+  }
+  
+  public void onTick() {
+    
+    if(this.secondsLeft == 0) {
+      this.chancesUsed ++;
+      this.secondsLeft = 10;
+    } else {
+      this.secondsLeft --;
+    }
+    
   }
   
   
@@ -131,6 +158,7 @@ class FloodItWorld extends World {
     }
   }
   
+ 
 
   // method that makes the rows for the world
   WorldImage makeRow(int row) {
@@ -146,7 +174,7 @@ class FloodItWorld extends World {
   void constructBoard() {
     ArrayList<Cell> result = new ArrayList<Cell>();
     ArrayList<Color> colors = new ArrayList<Color>(Arrays.asList(
-        Color.blue, Color.red, Color.green, Color.pink));
+        Color.blue, Color.red, Color.green, Color.pink, Color.orange, Color.magenta));
     for (int i = 0; i < this.size; i++) {
       for (int j = 0; j < this.size; j++) {
         result.add(new Cell(j, i, colors.get(this.rand.nextInt(colors.size())), false));
@@ -402,7 +430,7 @@ class FloodExamples {
   */
   
   void testGame(Tester t) {
-    testGame10.bigBang(1000,1000, 1.0 / 10.0);
+    testGame10.bigBang(1000,1000, 1.0 / 1);
   }
  
 
